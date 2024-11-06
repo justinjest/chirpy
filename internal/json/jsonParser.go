@@ -34,7 +34,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		output.CleanedBody = ""
 		output.Valid = false
 	} else {
-		output.CleanedBody = ""
+		output.CleanedBody = cleanBody(params.Body)
 		output.Valid = true
 	}
 	dat, err := json.Marshal(output)
@@ -44,20 +44,25 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	if !output.Valid {
-		w.WriteHeader(400)
-	} else {
+	if output.Valid {
 		w.WriteHeader(200)
+	} else {
+		w.WriteHeader(400)
 	}
 	w.Write(dat)
 }
 
 func cleanBody(s string) string {
 	const censorItem = "****"
+	badWords := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
+	}
 	split := strings.Split(s, " ")
 	var tmp []string
 	for _, word := range split {
-		if strings.ToLower(word) == "kerfuffle" {
+		if _, ok := badWords[strings.ToLower(word)]; ok {
 			tmp = append(tmp, censorItem)
 		} else {
 			tmp = append(tmp, word)

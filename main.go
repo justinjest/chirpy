@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 
 	jsonParser "github.com/justinjest/chirpy/internal/json"
+	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
