@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"os"
 	"sync/atomic"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/justinjest/chirpy/internal/database"
 	jsonParser "github.com/justinjest/chirpy/internal/json"
@@ -16,10 +18,16 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	database       *database.Queries
+	PLATFORM       string
+}
+type User struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
 }
 
 func main() {
-
 	const filepathRoot = "."
 	const port = "8080"
 	if err := godotenv.Load(); err != nil {
@@ -34,6 +42,7 @@ func main() {
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 		database:       dbQueries,
+		PLATFORM:       os.Getenv("PLATFORM"),
 	}
 	mux := http.NewServeMux()
 	handler := http.StripPrefix("/app/", http.FileServer(http.Dir(filepathRoot)))
@@ -42,6 +51,8 @@ func main() {
 	mux.HandleFunc("GET /admin/metrics", apiCfg.hitsHandler)
 	mux.HandleFunc("POST /api/reset", apiCfg.hitsReset)
 	mux.HandleFunc("POST /api/validate_chirp", jsonParser.Handler)
+	mux.HandleFunc("POST /api/users", apiCfg.CreateUser)
+	mux.HandleFunc("POST /admin/reset", apiCfg.DropUsers)
 
 	server := &http.Server{
 		Addr:    ":" + port,
