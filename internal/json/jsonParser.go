@@ -7,11 +7,15 @@ import (
 	"strings"
 )
 
-func Handler(w http.ResponseWriter, r *http.Request) {
-	type parameteres struct {
-		Body string `body:"body"`
-	}
+type parameteres struct {
+	Body  string `json:"body"`
+	Valid bool   `json:"valid"`
+}
+type ErrorVal struct {
+	Errormsg string `json:"error"`
+}
 
+func ChirpValidator(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	params := parameteres{}
 	err := decoder.Decode(&params)
@@ -20,23 +24,36 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
-	var errorMsg string
 	if len(params.Body) > 140 {
 		log.Printf("Chirp over 140 characters")
-		errorMsg = "Chirp too long"
+		res := ErrorVal{
+			Errormsg: "Chirp over 140 characters",
+		}
+		errorWriter(res, w)
+		return
 	}
-	type returnVals struct {
-		CleanedBody string `json:"cleaned_body"`
-		Valid       bool   `json:"valid"`
+
+	output := parameteres{
+		Body:  CleanBody(params.Body),
+		Valid: true,
 	}
-	output := returnVals{}
-	if errorMsg != "" {
-		output.CleanedBody = ""
-		output.Valid = false
-	} else {
-		output.CleanedBody = cleanBody(params.Body)
-		output.Valid = true
+	dat, err := json.Marshal(output)
+	if err != nil {
+		log.Printf("Error marshalling JSON: %s", err)
+		w.WriteHeader(500)
+		res := ErrorVal{
+			Errormsg: "Something went wrong",
+		}
+		errorWriter(res, w)
+		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	w.Write(dat)
+}
+
+func errorWriter(errorJson ErrorVal, w http.ResponseWriter) {
+	output := errorJson
 	dat, err := json.Marshal(output)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)
@@ -44,15 +61,11 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	if output.Valid {
-		w.WriteHeader(200)
-	} else {
-		w.WriteHeader(400)
-	}
+	w.WriteHeader(400)
 	w.Write(dat)
 }
 
-func cleanBody(s string) string {
+func CleanBody(s string) string {
 	const censorItem = "****"
 	badWords := map[string]struct{}{
 		"kerfuffle": {},
