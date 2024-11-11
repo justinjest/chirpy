@@ -72,6 +72,7 @@ func GetBearerToken(headers http.Header) (string, error) {
 	if auth == "" {
 		return "", errors.New("no authorization")
 	}
-	trim := strings.TrimPrefix(auth, "BEARER ")
+	trim := strings.TrimPrefix(auth, "Bearer ")
+	fmt.Printf("Bearer token %v\n", trim)
 	return trim, nil
 }

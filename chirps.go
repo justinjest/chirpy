@@ -24,17 +24,18 @@ type chirp struct {
 
 func (cfg *apiConfig) createChirp(w http.ResponseWriter, r *http.Request) {
 	type params struct {
-		Body   string    `json:"body"`
-		UserId uuid.UUID `json:"user_id"`
+		Body string `json:"body"`
 	}
 	token, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		w.WriteHeader(401)
+		fmt.Printf("Error getting bearer token %v\n", token)
 		return
 	}
 	uuid, err := auth.ValidateJWT(token, cfg.secret)
 	if err != nil {
 		w.WriteHeader(401)
+		fmt.Printf("Unable to validate token, %v\n", err)
 		return
 	}
 	par := params{}
@@ -45,10 +46,6 @@ func (cfg *apiConfig) createChirp(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
-	if uuid != par.UserId {
-		w.WriteHeader(401)
-		return
-	}
 	if len(par.Body) > 140 {
 		log.Printf("Chirp over 140 characters")
 		return
@@ -57,11 +54,13 @@ func (cfg *apiConfig) createChirp(w http.ResponseWriter, r *http.Request) {
 	par.Body = jsonParser.CleanBody(tmp)
 	dbOutput := database.CreateChirpParams{
 		Body:   par.Body,
-		UserID: par.UserId,
+		UserID: uuid,
 	}
 	newChirp, err := cfg.database.CreateChirp(context.Background(), dbOutput)
 	if err != nil {
 		fmt.Printf("Chirp unable to be stored %v\n", err)
+		w.WriteHeader(500)
+		return
 	}
 	tmpChirp := chirp{
 		ID:        newChirp.ID,

@@ -76,7 +76,6 @@ func (apiCfg *apiConfig) userLogin(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	hash, err := apiCfg.database.GetUserHash(context.Background(), params.Email)
-	fmt.Printf("%v\n", hash)
 	if err != nil {
 		log.Printf("error retriving hash %v", err)
 		w.WriteHeader(500)
@@ -93,13 +92,13 @@ func (apiCfg *apiConfig) userLogin(w http.ResponseWriter, req *http.Request) {
 		log.Printf("error creating user %v", err)
 		return
 	}
-	var expTime int
+	expTime := 0
 	if params.Expires >= 36000 || params.Expires == 0 {
 		expTime = 36000
 	} else {
 		expTime = params.Expires
 	}
-	token, err := auth.MakeJWT(usr.ID, apiCfg.secret, time.Duration(expTime*1000))
+	token, err := auth.MakeJWT(usr.ID, apiCfg.secret, time.Duration(1000*expTime))
 	if err != nil {
 		w.WriteHeader(500)
 		return
@@ -112,6 +111,7 @@ func (apiCfg *apiConfig) userLogin(w http.ResponseWriter, req *http.Request) {
 		Email:     usr.Email,
 		Token:     token,
 	}
+	fmt.Printf("userID: %v\n", res.ID)
 	data, err := json.Marshal(res)
 	if err != nil {
 		log.Printf("Error marshiling user %v", err)
