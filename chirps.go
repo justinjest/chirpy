@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/justinjest/chirpy/internal/auth"
 	"github.com/justinjest/chirpy/internal/database"
 	jsonParser "github.com/justinjest/chirpy/internal/json"
 )
@@ -26,12 +27,26 @@ func (cfg *apiConfig) createChirp(w http.ResponseWriter, r *http.Request) {
 		Body   string    `json:"body"`
 		UserId uuid.UUID `json:"user_id"`
 	}
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		w.WriteHeader(401)
+		return
+	}
+	uuid, err := auth.ValidateJWT(token, cfg.secret)
+	if err != nil {
+		w.WriteHeader(401)
+		return
+	}
 	par := params{}
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&par)
+	err = decoder.Decode(&par)
 	if err != nil {
 		log.Printf("error decoding parameters: %s", err)
 		w.WriteHeader(500)
+		return
+	}
+	if uuid != par.UserId {
+		w.WriteHeader(401)
 		return
 	}
 	if len(par.Body) > 140 {

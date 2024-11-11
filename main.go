@@ -18,6 +18,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	database       *database.Queries
 	PLATFORM       string
+	secret         string
 }
 
 type User struct {
@@ -25,6 +26,7 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+	Token     string    `json:"token"`
 }
 
 func main() {
@@ -43,6 +45,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		database:       dbQueries,
 		PLATFORM:       os.Getenv("PLATFORM"),
+		secret:         os.Getenv("SECRET"),
 	}
 	mux := http.NewServeMux()
 	handler := http.StripPrefix("/app/", http.FileServer(http.Dir(filepathRoot)))

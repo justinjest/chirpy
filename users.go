@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/justinjest/chirpy/internal/auth"
 	"github.com/justinjest/chirpy/internal/database"
@@ -65,6 +66,7 @@ func (apiCfg *apiConfig) userLogin(w http.ResponseWriter, req *http.Request) {
 	type parameteres struct {
 		Password string `json:"password"`
 		Email    string `json:"email"`
+		Expires  int    `json:"expires_in_seconds, ommitempty"`
 	}
 	decoder := json.NewDecoder(req.Body)
 	params := parameteres{}
@@ -91,12 +93,24 @@ func (apiCfg *apiConfig) userLogin(w http.ResponseWriter, req *http.Request) {
 		log.Printf("error creating user %v", err)
 		return
 	}
+	var expTime int
+	if params.Expires >= 36000 || params.Expires == 0 {
+		expTime = 36000
+	} else {
+		expTime = params.Expires
+	}
+	token, err := auth.MakeJWT(usr.ID, apiCfg.secret, time.Duration(expTime*1000))
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
 	w.WriteHeader(200)
 	res := User{
 		ID:        usr.ID,
 		CreatedAt: usr.CreatedAt,
 		UpdatedAt: usr.UpdatedAt,
 		Email:     usr.Email,
+		Token:     token,
 	}
 	data, err := json.Marshal(res)
 	if err != nil {
