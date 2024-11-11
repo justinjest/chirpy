@@ -27,11 +27,6 @@ type User struct {
 	Email     string    `json:"email"`
 }
 
-type Chirp struct {
-	body    string    `json:"body"`
-	user_id uuid.UUID `json:"user_id"`
-}
-
 func main() {
 	const filepathRoot = "."
 	const port = "8080"
@@ -59,6 +54,8 @@ func main() {
 	mux.HandleFunc("POST /api/chirps", apiCfg.createChirp)
 	mux.HandleFunc("GET /api/chirps", apiCfg.getChirps)
 	mux.HandleFunc("POST /admin/reset", apiCfg.DropUsers)
+	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.getOneChirp)
+	mux.HandleFunc("POST /api/login", apiCfg.userLogin)
 
 	server := &http.Server{
 		Addr:    ":" + port,
