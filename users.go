@@ -33,7 +33,6 @@ func (cfg *apiConfig) CreateUser(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	params.Password, err = auth.HashPassword(params.Password)
-	log.Printf("%v\n", params.Password)
 	if err != nil {
 		log.Printf("errror generating hash %v", err)
 		return
@@ -106,7 +105,13 @@ func (apiCfg *apiConfig) userLogin(w http.ResponseWriter, req *http.Request) {
 		Token:  refreshToken,
 		UserID: usr.ID,
 	}
-	apiCfg.database.CreateRefreshToken(context.Background(), refreshTokenParams)
+	tkn, err := apiCfg.database.CreateRefreshToken(context.Background(), refreshTokenParams)
+	if err != nil {
+		fmt.Print(tkn)
+		fmt.Print("Unable to generate apiCFG database, ", err)
+		w.WriteHeader(500)
+		return
+	}
 	res := User{
 		ID:           usr.ID,
 		CreatedAt:    usr.CreatedAt,
@@ -134,6 +139,7 @@ func (apiCfg *apiConfig) refreshUser(w http.ResponseWriter, req *http.Request) {
 	}
 	usr, err := apiCfg.database.GetUserFromRefreshToken(context.Background(), token)
 	if err != nil {
+		fmt.Print(token)
 		log.Print("error getting user from token db", err)
 		w.WriteHeader(401)
 		return

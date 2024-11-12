@@ -18,7 +18,7 @@ VALUES(
     NOW(),
     NOW(),
     $2,
-    DATEADD(DAY, 60, NOW()),
+    now() + INTERVAL '60 days', 
     NULL
 )
 RETURNING token, created_at, updated_at, user_id, expires_at, revoked_at

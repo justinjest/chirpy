@@ -5,7 +5,7 @@ VALUES(
     NOW(),
     NOW(),
     $2,
-    DATEADD(DAY, 60, NOW()),
+    now() + INTERVAL '60 days', 
     NULL
 )
 RETURNING *;
