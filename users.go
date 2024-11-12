@@ -66,7 +66,6 @@ func (apiCfg *apiConfig) userLogin(w http.ResponseWriter, req *http.Request) {
 	type parameteres struct {
 		Password string `json:"password"`
 		Email    string `json:"email"`
-		Expires  int    `json:"expires_in_seconds, ommitempty"`
 	}
 	decoder := json.NewDecoder(req.Body)
 	params := parameteres{}
@@ -92,24 +91,30 @@ func (apiCfg *apiConfig) userLogin(w http.ResponseWriter, req *http.Request) {
 		log.Printf("error creating user %v", err)
 		return
 	}
-	expTime := 0
-	if params.Expires >= 36000 || params.Expires == 0 {
-		expTime = 36000
-	} else {
-		expTime = params.Expires
-	}
-	token, err := auth.MakeJWT(usr.ID, apiCfg.secret, time.Duration(1000*expTime))
+	token, err := auth.MakeJWT(usr.ID, apiCfg.secret, time.Duration(1000*3600))
 	if err != nil {
 		w.WriteHeader(500)
 		return
 	}
+
 	w.WriteHeader(200)
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		fmt.Printf("error creating refresh token %v\n", err)
+		return
+	}
+	refreshTokenParams := database.CreateRefreshTokenParams{
+		Token:  refreshToken,
+		UserID: usr.ID,
+	}
+	apiCfg.database.CreateRefreshToken(context.Background(), refreshTokenParams)
 	res := User{
-		ID:        usr.ID,
-		CreatedAt: usr.CreatedAt,
-		UpdatedAt: usr.UpdatedAt,
-		Email:     usr.Email,
-		Token:     token,
+		ID:           usr.ID,
+		CreatedAt:    usr.CreatedAt,
+		UpdatedAt:    usr.UpdatedAt,
+		Email:        usr.Email,
+		Token:        token,
+		RefreshToken: refreshToken,
 	}
 	fmt.Printf("userID: %v\n", res.ID)
 	data, err := json.Marshal(res)

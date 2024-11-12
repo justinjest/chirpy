@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/justinjest/chirpy/internal/database"
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 )
 
@@ -22,11 +23,21 @@ type apiConfig struct {
 }
 
 type User struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-	Token     string    `json:"token"`
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token`
+}
+
+type RefreshToken struct {
+	ID        string      `json:"id"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
+	UserID    uuid.UUID   `json:"user_id"`
+	Expires   time.Time   `json:"expires_at"`
+	Revoked   pq.NullTime `json:"revoked_at"`
 }
 
 func main() {
