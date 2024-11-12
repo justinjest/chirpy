@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/justinjest/chirpy/internal/auth"
 	"github.com/justinjest/chirpy/internal/database"
@@ -63,12 +62,12 @@ func (cfg *apiConfig) CreateUser(w http.ResponseWriter, req *http.Request) {
 }
 
 func (apiCfg *apiConfig) userLogin(w http.ResponseWriter, req *http.Request) {
-	type parameteres struct {
+	type parameters struct {
 		Password string `json:"password"`
 		Email    string `json:"email"`
 	}
 	decoder := json.NewDecoder(req.Body)
-	params := parameteres{}
+	params := parameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
 		log.Printf("error decoding paramaters %v", err)
@@ -91,18 +90,18 @@ func (apiCfg *apiConfig) userLogin(w http.ResponseWriter, req *http.Request) {
 		log.Printf("error creating user %v", err)
 		return
 	}
-	token, err := auth.MakeJWT(usr.ID, apiCfg.secret, time.Duration(1000*3600))
+	token, err := auth.MakeJWT(usr.ID, apiCfg.secret)
 	if err != nil {
 		w.WriteHeader(500)
 		return
 	}
-
-	w.WriteHeader(200)
 	refreshToken, err := auth.MakeRefreshToken()
 	if err != nil {
 		fmt.Printf("error creating refresh token %v\n", err)
+		w.WriteHeader(500)
 		return
 	}
+	w.WriteHeader(200)
 	refreshTokenParams := database.CreateRefreshTokenParams{
 		Token:  refreshToken,
 		UserID: usr.ID,
@@ -120,6 +119,41 @@ func (apiCfg *apiConfig) userLogin(w http.ResponseWriter, req *http.Request) {
 	data, err := json.Marshal(res)
 	if err != nil {
 		log.Printf("Error marshiling user %v", err)
+		w.WriteHeader(500)
+		return
+	}
+	w.Write(data)
+}
+
+func (apiCfg *apiConfig) refreshUser(w http.ResponseWriter, req *http.Request) {
+	token, err := auth.GetBearerToken(w.Header())
+	if err != nil {
+		log.Print("error, ", err)
+		w.WriteHeader(500)
+		return
+	}
+	usr, err := apiCfg.database.GetUserFromRefreshToken(context.Background(), token)
+	if err != nil {
+		log.Print("error getting user from token db", err)
+		w.WriteHeader(500)
+		return
+	}
+	auth, err := auth.MakeJWT(usr.ID, apiCfg.secret)
+	if err != nil {
+		log.Print("error making JWT, ", err)
+		w.WriteHeader(401)
+		return
+	}
+	type response struct {
+		Token string `json:"token"`
+	}
+	res := response{
+		Token: auth,
+	}
+	data, err := json.Marshal(res)
+	if err != nil {
+		log.Printf("Error marshiling user %v", err)
+		w.WriteHeader(500)
 		return
 	}
 	w.Write(data)
