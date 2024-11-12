@@ -137,6 +137,13 @@ func (apiCfg *apiConfig) refreshUser(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(401)
 		return
 	}
+	_, err = apiCfg.database.SelectNewestToken(context.Background(), token)
+	if err != nil {
+		log.Println("Database query error:", err)
+		w.WriteHeader(401)
+		return
+	}
+
 	usr, err := apiCfg.database.GetUserFromRefreshToken(context.Background(), token)
 	if err != nil {
 		fmt.Print(token)
@@ -164,4 +171,25 @@ func (apiCfg *apiConfig) refreshUser(w http.ResponseWriter, req *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
+}
+func (apiCfg *apiConfig) revokeUser(w http.ResponseWriter, req *http.Request) {
+	tkn, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		log.Print("error, ", err)
+		w.WriteHeader(401)
+		return
+	}
+	usr, err := apiCfg.database.GetUserFromRefreshToken(context.Background(), tkn)
+	if err != nil {
+		log.Printf("error loading user from refresh token %v\n", err)
+		w.WriteHeader(401)
+		return
+	}
+	_, err = apiCfg.database.RevokeRefreshToken(context.Background(), usr.ID)
+	if err != nil {
+		log.Printf("error handling revoking refresh token %v\n", err)
+		w.WriteHeader(500)
+		return
+	}
+	w.WriteHeader(204)
 }
