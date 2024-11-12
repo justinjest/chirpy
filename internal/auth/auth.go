@@ -47,6 +47,7 @@ func MakeJWT(userID uuid.UUID, tokenSecret string) (string, error) {
 }
 
 func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
+	fmt.Printf("%v\n", tokenString)
 	keyFunc := func(token *jwt.Token) (interface{}, error) {
 		// First, verify the signing method is what we expect
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -75,7 +76,6 @@ func GetBearerToken(headers http.Header) (string, error) {
 		return "", errors.New("no authorization")
 	}
 	trim := strings.TrimPrefix(auth, "Bearer ")
-	fmt.Printf("Bearer token %v\n", trim)
 	return trim, nil
 }
 

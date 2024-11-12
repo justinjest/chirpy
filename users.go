@@ -126,16 +126,16 @@ func (apiCfg *apiConfig) userLogin(w http.ResponseWriter, req *http.Request) {
 }
 
 func (apiCfg *apiConfig) refreshUser(w http.ResponseWriter, req *http.Request) {
-	token, err := auth.GetBearerToken(w.Header())
+	token, err := auth.GetBearerToken(req.Header)
 	if err != nil {
 		log.Print("error, ", err)
-		w.WriteHeader(500)
+		w.WriteHeader(401)
 		return
 	}
 	usr, err := apiCfg.database.GetUserFromRefreshToken(context.Background(), token)
 	if err != nil {
 		log.Print("error getting user from token db", err)
-		w.WriteHeader(500)
+		w.WriteHeader(401)
 		return
 	}
 	auth, err := auth.MakeJWT(usr.ID, apiCfg.secret)
@@ -156,5 +156,6 @@ func (apiCfg *apiConfig) refreshUser(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
 }
