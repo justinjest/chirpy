@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/justinjest/chirpy/internal/auth"
 	"github.com/justinjest/chirpy/internal/database"
 )
@@ -51,6 +52,7 @@ func (cfg *apiConfig) CreateUser(w http.ResponseWriter, req *http.Request) {
 		CreatedAt: usr.CreatedAt,
 		UpdatedAt: usr.UpdatedAt,
 		Email:     usr.Email,
+		RedStatus: usr.IsChirpyRed,
 	}
 	data, err := json.Marshal(res)
 	if err != nil {
@@ -119,6 +121,7 @@ func (apiCfg *apiConfig) userLogin(w http.ResponseWriter, req *http.Request) {
 		Email:        usr.Email,
 		Token:        token,
 		RefreshToken: refreshToken,
+		RedStatus:    usr.IsChirpyRed,
 	}
 	fmt.Printf("userID: %v\n", res.ID)
 	data, err := json.Marshal(res)
@@ -192,4 +195,89 @@ func (apiCfg *apiConfig) revokeUser(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.WriteHeader(204)
+}
+
+func (apiCfg *apiConfig) updateUser(w http.ResponseWriter, req *http.Request) {
+	type parameters struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}
+	decoder := json.NewDecoder(req.Body)
+	params := parameters{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		log.Printf("error decoding paramaters %v", err)
+		w.WriteHeader(401)
+		return
+	}
+	token, err := auth.GetBearerToken(req.Header)
+	if err != nil {
+		log.Print("error, ", err)
+		w.WriteHeader(401)
+		return
+	}
+	id, err := auth.ValidateJWT(token, apiCfg.secret)
+	if err != nil {
+		w.WriteHeader(401)
+		return
+	}
+	hash, err := auth.HashPassword(params.Password)
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
+	dat := database.UpdateUserDataParams{
+		ID:             id,
+		HashedPassword: hash,
+		Email:          params.Email,
+	}
+	usr, err := apiCfg.database.UpdateUserData(context.Background(), dat)
+	if err != nil {
+		w.WriteHeader(401)
+		return
+	}
+	res := User{
+		ID:        usr.ID,
+		CreatedAt: usr.CreatedAt,
+		UpdatedAt: usr.UpdatedAt,
+		Email:     usr.Email,
+	}
+	data, err := json.Marshal(res)
+	if err != nil {
+		log.Printf("Error marshiling user %v", err)
+		w.WriteHeader(500)
+		return
+	}
+	w.WriteHeader(200)
+	w.Write(data)
+}
+
+func (cfg *apiConfig) updateUserRed(w http.ResponseWriter, req *http.Request) {
+	type data struct {
+		UserID uuid.UUID `json:"user_id"`
+	}
+	type parameters struct {
+		WebhookEvent string `json:"event"`
+		Data         data   `json:"data"`
+	}
+	decoder := json.NewDecoder(req.Body)
+	params := parameters{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		log.Printf("error decoding paramaters %v", err)
+		w.WriteHeader(401)
+		return
+	}
+	if params.WebhookEvent != "user.upgraded" {
+		w.WriteHeader(204)
+		return
+	}
+	_, err = cfg.database.SetIsRed(context.Background(), params.Data.UserID)
+	if err != nil {
+		log.Printf("Unable to set is red %v\n", err)
+		w.WriteHeader(404)
+		return
+	}
+	w.WriteHeader(204)
+
 }

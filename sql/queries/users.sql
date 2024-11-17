@@ -35,3 +35,16 @@ WHERE id = (
 SELECT user_id
 FROM refresh_tokens
 WHERE token = $1);
+
+-- name: UpdateUserData :one
+UPDATE users
+SET hashed_password = $1,
+email = $2
+WHERE id = $3
+RETURNING *;
+
+-- name: SetIsRed :one
+UPDATE users
+SET is_chirpy_red = TRUE
+WHERE id = $1
+RETURNING *;

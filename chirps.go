@@ -112,8 +112,6 @@ func (cfg *apiConfig) getChirps(w http.ResponseWriter, r *http.Request) {
 func (cfg *apiConfig) getOneChirp(w http.ResponseWriter, r *http.Request) {
 	pathString := r.PathValue("chirpID")
 	pathUUID, err := uuid.Parse(pathString)
-	fmt.Printf("%v, %v\n", pathString, pathUUID)
-	fmt.Printf("%v\n", r)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		w.WriteHeader(500)
@@ -140,4 +138,41 @@ func (cfg *apiConfig) getOneChirp(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(200)
 	w.Write(out)
+}
+
+func (cfg *apiConfig) deleteChirp(w http.ResponseWriter, r *http.Request) {
+	pathString := r.PathValue("chirpID")
+	pathUUID, err := uuid.Parse(pathString)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		w.WriteHeader(500)
+		return
+	}
+	chirpResp, err := cfg.database.GetOneChirp(context.Background(), pathUUID)
+	if err != nil {
+		fmt.Printf("Chrip not found %v\n", err)
+		w.WriteHeader(404)
+		return
+	}
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		log.Print("error, ", err)
+		w.WriteHeader(401)
+		return
+	}
+	id, err := auth.ValidateJWT(token, cfg.secret)
+	if err != nil {
+		w.WriteHeader(401)
+		return
+	}
+	if chirpResp.UserID != id {
+		w.WriteHeader(403)
+		return
+	}
+	err = cfg.database.DeleteChirp(context.Background(), chirpResp.ID)
+	if err != nil {
+		w.WriteHeader(404)
+		return
+	}
+	w.WriteHeader(204)
 }
