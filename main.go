@@ -20,6 +20,7 @@ type apiConfig struct {
 	database       *database.Queries
 	PLATFORM       string
 	secret         string
+	apiKey         string
 }
 
 type User struct {
@@ -58,6 +59,7 @@ func main() {
 		database:       dbQueries,
 		PLATFORM:       os.Getenv("PLATFORM"),
 		secret:         os.Getenv("SECRET"),
+		apiKey:         os.Getenv("API_KEY"),
 	}
 	mux := http.NewServeMux()
 	handler := http.StripPrefix("/app/", http.FileServer(http.Dir(filepathRoot)))

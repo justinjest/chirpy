@@ -253,6 +253,16 @@ func (apiCfg *apiConfig) updateUser(w http.ResponseWriter, req *http.Request) {
 }
 
 func (cfg *apiConfig) updateUserRed(w http.ResponseWriter, req *http.Request) {
+	key, err := auth.GetAPIKey(req.Header)
+	if err != nil {
+		log.Printf("error getting api key %v\n", err)
+		w.WriteHeader(401)
+		return
+	}
+	if key != cfg.apiKey {
+		w.WriteHeader(401)
+		return
+	}
 	type data struct {
 		UserID uuid.UUID `json:"user_id"`
 	}
@@ -262,7 +272,7 @@ func (cfg *apiConfig) updateUserRed(w http.ResponseWriter, req *http.Request) {
 	}
 	decoder := json.NewDecoder(req.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		log.Printf("error decoding paramaters %v", err)
 		w.WriteHeader(401)
