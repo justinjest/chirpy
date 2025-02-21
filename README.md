@@ -26,4 +26,4 @@ This will require you to connect the document to the frontend of your choosing. 
 	POST /api/polka/webhooks - A webhook for our "payment processor" that enables you to update a users verified status
 
 ## Contributing
-Contribut by forking the repo opening a pull request! All pull requests should be submited to the main branch.
+Contribute by forking the repo opening a pull request! All pull requests should be submited to the main branch.
